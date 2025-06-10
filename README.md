@@ -76,7 +76,7 @@ Before you begin, ensure you have the following installed on your system:
 1.  **Clone the Repository:**
     Navigate to your desired directory and clone the project:
     ```bash
-    git clone <Your-Repository-URL> # Replace with your actual GitHub repository URL
+    git clone https://github.com/sahil00016/GoQuant.git # Replace with your actual GitHub repository URL
     cd goQuant # Or whatever your repository's root directory is named
     ```
 
