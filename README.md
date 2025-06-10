@@ -36,11 +36,13 @@ Through the development process, we have successfully implemented the following 
 *   **HTTP API for Client Interaction:**
     *   A RESTful API is provided using the `cpp-httplib` library, allowing external clients to interact with the matching engine.
     *   **Endpoints:**
+        *   `GET /`: A basic endpoint to check if the server is running.
         *   `POST /order`: Submit new buy/sell orders.
         *   `GET /orderbook/:symbol`: Retrieve the current depth (price levels and total quantities) for a specific cryptocurrency symbol.
         *   `DELETE /order/:symbol/:id`: Cancel an existing order by its ID.
 *   **Robustness and Error Handling:**
     *   Implemented `try-catch` blocks in critical sections (e.g., HTTP server startup, order processing loop) to catch and log exceptions, improving the application's stability.
+    *   Added detailed logging to the HTTP server endpoints to aid in debugging request handling and response generation.
     *   Addressed and resolved complex concurrency issues, including a "device or resource busy" error caused by recursive mutex locking, ensuring the application runs without crashing during order processing.
 *   **Build System:** Configured with CMake for easy compilation across different platforms, managing dependencies via `vcpkg`.
 
@@ -76,8 +78,8 @@ Before you begin, ensure you have the following installed on your system:
 1.  **Clone the Repository:**
     Navigate to your desired directory and clone the project:
     ```bash
-    git clone https://github.com/sahil00016/GoQuant.git # Replace with your actual GitHub repository URL
-    cd goQuant # Or whatever your repository's root directory is named
+    git clone https://github.com/sahil00016/GoQuant.git
+    cd GoQuant
     ```
 
 2.  **Install Dependencies using Vcpkg:**
@@ -99,14 +101,14 @@ Before you begin, ensure you have the following installed on your system:
 3.  **Build the Project:**
     Create a `build` directory and use CMake to configure and build the project. This process will compile the source code and link the necessary libraries.
 
-    *   **Windows (PowerShell - from project root, e.g., `goQuant`):**
+    *   **Windows (PowerShell - from project root, e.g., `GoQuant`):**
         ```powershell
         mkdir build
         cd build
         cmake -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake ..
         cmake --build . --config Debug # Or Release for optimized build
         ```
-    *   **Linux/macOS (Bash - from project root, e.g., `goQuant`):**
+    *   **Linux/macOS (Bash - from project root, e.g., `GoQuant`):**
         ```bash
         mkdir build
         cd build
@@ -129,14 +131,30 @@ Before you begin, ensure you have the following installed on your system:
 
 ### Expected Output in Terminal
 
-Upon running the application, you should see output similar to this, indicating the HTTP server has started and test orders are being submitted:
+Upon running the application, you should see output similar to this, indicating the HTTP server has started. Note that the application is configured to not generate random orders by default, allowing for manual API interaction.
 
 ```
 Starting HTTP server on port 8081
-Submitting order: {"id":1,"price":312.9164648456355,"quantity":5.0866156661231665,"side":"sell","symbol":"BTC/USD","timestamp":1749573727597,"type":"market"}
-Submitting order: {"id":2,"price":199.4675212740445,"quantity":7.626646301543418,"side":"sell","symbol":"BTC/USD","timestamp":1749573727697,"type":"market"}
-Submitting order: {"id":3,"price":917.1456004522128,"quantity":2.6731677175336515,"side":"sell","symbol":"BTC/USD","timestamp":1749573727807,"type":"ioc"}
-# ... (more order submission logs) ...
+Received GET / request.
+Received POST /order request: {"id": 1, "symbol": "BTC/USD", "side": "buy", "type": "limit", "quantity": 0.1, "price": 40000.0}
+Submitting order: ID=1, Symbol=BTC/USD, Side=BUY, Type=1, Quantity=0.1, Price=40000.000000
+Order submitted successfully
+OrderBook for BTC/USD created.
+OrderBook::addOrder received order ID: 1
+OrderBook::matchOrder trying to match ID: 1, side: BUY, qty: 0.1
+OrderBook::matchAgainstSide for ID: 1, is_buy: 1, opposite_side empty: 1
+OrderBook::getBBO - Bid: 0, Offer: 0
+BBO Update: BTC/USD, Bid: 0, Offer: 0
+OrderBook::addToBook adding order ID: 1 price: 40000 side: BUY
+OrderBook::addToBook (BUY) Level total qty for price 40000: 0.1
+OrderBook::getBBO - Bid: 40000, Offer: 0
+BBO Update: BTC/USD, Bid: 40000, Offer: 0
+OrderBook::addOrder added to book ID: 1, qty: 0.1
+Received GET /orderbook request for symbol: BTC/USD
+Path parameters received:
+  symbol: BTC/USD
+Retrieved 1 bids and 0 asks for symbol: BTC/USD
+Sending orderbook response for symbol: BTC/USD
 ```
 
 The application will continue to run and keep the HTTP server active until you manually stop it (e.g., by pressing `Ctrl+C` in the terminal).
@@ -145,26 +163,32 @@ The application will continue to run and keep the HTTP server active until you m
 
 Once the server is running on `localhost:8081`, you can interact with it using `curl` or any API client (like Postman/Insomnia).
 
+*   **Check Server Status:**
+    ```bash
+    curl http://localhost:8081/
+    ```
+    (Expected output: `Hello from GoQuant Matching Engine!`)
+
 *   **Submit a Limit Buy Order:**
     ```bash
     curl -X POST http://localhost:8081/order -H "Content-Type: application/json" -d "{
-        \"id\": 101,
-        \"symbol\": \"BTC/USD\",
-        \"side\": \"buy\",
-        \"type\": \"limit\",
-        \"quantity\": 0.5,
-        \"price\": 50000.0
+        "id": 101,
+        "symbol": "BTC/USD",
+        "side": "buy",
+        "type": "limit",
+        "quantity": 0.5,
+        "price": 50000.0
     }"
     ```
 
 *   **Submit a Market Sell Order:**
     ```bash
     curl -X POST http://localhost:8081/order -H "Content-Type: application/json" -d "{
-        \"id\": 102,
-        \"symbol\": \"BTC/USD\",
-        \"side\": \"sell\",
-        \"type\": \"market\",
-        \"quantity\": 1.2
+        "id": 102,
+        "symbol": "BTC/USD",
+        "side": "sell",
+        "type": "market",
+        "quantity": 1.2
     }"
     ```
 
@@ -172,7 +196,19 @@ Once the server is running on `localhost:8081`, you can interact with it using `
     ```bash
     curl http://localhost:8081/orderbook/BTC/USD
     ```
-    (Expected output will be a JSON array of price-quantity pairs for bids and asks.)
+    (Expected output will be a JSON object containing bids and asks. For example, after submitting the limit buy order above, you might see:)
+    ```json
+    {
+        "symbol": "BTC/USD",
+        "bids": [
+            {
+                "price": 40000.0,
+                "quantity": 0.1
+            }
+        ],
+        "asks": []
+    }
+    ```
 
 *   **Cancel an Order (e.g., order ID 101 for BTC/USD):**
     ```bash
