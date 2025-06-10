@@ -1,0 +1,10 @@
+^C:\USERS\SAHIL\MAIN FOLDER\GOQUANT\BUILD\CMAKEFILES\DB141093DD681DB45B0A99B5ACABCA2A\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/sahil/MAIN FOLDER/goQuant" "-BC:/Users/sahil/MAIN FOLDER/goQuant/build" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "C:/Users/sahil/MAIN FOLDER/goQuant/build/matching_engine.sln"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
